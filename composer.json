@@ -1,26 +1,31 @@
 {
-    "name": "lamoni/netconf",
-    "description": "A vendor-agnostic PHP NETCONF implementation",
-    "license": "MIT",
-    "version": "1.0.1",
-    "require": {
-        "php": ">= 5.4.16",
-        "phpseclib/phpseclib": "1.0.*"
+  "name": "cis-bv/netconf",
+  "description": "A vendor-agnostic PHP NETCONF implementation",
+  "license": "MIT",
+  "version": "2.0.0",
+  "require": {
+    "php": "^8.3 || ^8.4",
+    "ext-simplexml": "*",
+    "phpseclib/phpseclib": "^3.0.0"
+  },
+  "authors": [
+    {
+      "name": "Lamoni Finlayson",
+      "email": "lamonif@gmail.com"
     },
-    "authors": [
-        { 
-            "name": "Lamoni Finlayson",
-            "email": "lamonif@gmail.com"
-        }
-    ],
-    "homepage": "https://github.com/lamoni/netconf",
-    "keywords": [
-        "php",
-        "netconf"
-    ],
-    "autoload": {
-        "psr-4": {
-            "Lamoni\\NetConf\\": "src"
-        }
+    {
+      "name": "Kay Schroeder",
+      "email": "kay.schroeder@cis-gotha.de"
     }
+  ],
+  "homepage": "https://github.com/cis-ks/netconf",
+  "keywords": [
+    "php",
+    "netconf"
+  ],
+  "autoload": {
+    "psr-4": {
+      "CisBv\\Netconf\\": "src"
+    }
+  }
 }

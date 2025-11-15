@@ -1,38 +1,31 @@
-<?php namespace Lamoni\NetConf\NetConfAuth;
+<?php
+namespace CisBv\Netconf\NetConfAuth;
 
-use Net_SSH2;
-use Crypt_RSA;
+use Exception;
+use phpseclib3\Crypt\PublicKeyLoader;
+use phpseclib3\Net\SSH2;
+use RuntimeException;
 
 /**
  * Class NetConfAuthRSAFile
- * @package Lamoni\NetConf\NetConfAuth
+ * @package CisBv\Netconf\NetConfAuth
  */
 class NetConfAuthRSAFile extends NetConfAuthAbstract
 {
+    protected static array $acceptableParams = ['username' => 'is_string', 'rsafile' => 'file_exists'];
+
     /**
-     *Performs the authentication check for this auth type
+     * Performs the authentication check for this auth type
      *
-     * @param Net_SSH2 $ssh
-     * @throws \Exception
+     * @throws Exception
+     * @throws RuntimeException
      */
-    public function login(Net_SSH2 &$ssh)
+    public function login(SSH2 $ssh): void
     {
-        $this->validateAuthParams(
-            $this->authParams,
-            $acceptableParams = [
-                'username' => 'is_string',
-                'rsafile' => 'file_exists'
-            ]
-        );
+        $rsaKey = PublicKeyLoader::load(file_get_contents($this->authParams['rsafile']));
 
-        extract($this->authParams);
-
-        $rsakey = new Crypt_RSA();
-
-        $rsakey->loadKey(file_get_contents($rsafile));
-
-        if (!$ssh->login($username, $rsakey)) {
-            throw new \Exception(get_class().': Authentication failed');
+        if (!$ssh->login($this->authParams['username'], $rsaKey)) {
+            throw new RuntimeException("Authentication for {$this->authParams['username']} failed with RSA key");
         }
     }
 }

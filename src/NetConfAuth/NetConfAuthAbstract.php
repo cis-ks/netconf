@@ -1,64 +1,63 @@
-<?php namespace Lamoni\NetConf\NetConfAuth;
+<?php
+namespace CisBv\Netconf\NetConfAuth;
 
-use Net_SSH2;
+use BadMethodCallException;
+use CisBv\Netconf\Interfaces\NetConfAuth;
+use Exception;
+use InvalidArgumentException;
+use phpseclib3\Net\SSH2;
+use ValueError;
 
 /**
  * Class NetConfAuthAbstract
- * @package Lamoni\NetConf\NetConfAuth
+ * @package CisBv\Netconf\NetConfAuth
  */
-abstract class NetConfAuthAbstract
+abstract class NetConfAuthAbstract implements NetConfAuth
 {
-    /**
-     * Holds the auth parameters as described by our extended class
-     */
-    protected $authParams;
+    protected static array $acceptableParams = [];
 
     /**
      * Builds our NetConfAuth* instance
      *
-     * @param $authParams
+     * @param array $authParams
+     * @throws Exception
      */
-    public function __construct($authParams) {
-
-        $this->authParams = $authParams;
+    public function __construct(
+        protected array $authParams
+    ) {
+        $this->validateAuthParams();
     }
 
     /**
      * All classes extending NetConfAuthAbstract require the specification of logging in
-     *
-     * @param Net_SSH2 $ssh
-     * @return mixed
+     * @throws Exception
      */
-    abstract public function login(Net_SSH2 &$ssh);
+    abstract public function login(SSH2 $ssh): void;
 
     /**
      * All children will need this to validate the passed inputs against our defined inputs
      *
-     * @param array $authParams
-     * @param array $acceptableParams
-     * @throws \Exception
+     * @throws InvalidArgumentException
+     * @throws BadMethodCallException
+     * @throws ValueError
      */
-    public function validateAuthParams(array $authParams, array $acceptableParams)
+    protected function validateAuthParams(): void
     {
-        foreach ($authParams as $paramName=>$paramValue) {
-
-            if (!isset($acceptableParams[$paramName])) {
-                throw new \Exception(get_class().": Unacceptable authParam: {$paramName}");
+        foreach ($this->authParams as $paramName => $paramValue) {
+            if (!array_key_exists($paramName, static::$acceptableParams)) {
+                throw new InvalidArgumentException("Invalid parameter: $paramName");
             }
 
-            // Try resolving to class method first, then try resolving to global function
-            if (method_exists($this, $acceptableParams[$paramName])) {
-                $validationPassed = $this->$acceptableParams[$paramName]($paramValue);
-            }
-            elseif (function_exists($acceptableParams[$paramName])) {
-                $validationPassed = $acceptableParams[$paramName]($paramValue);
-            }
-            else {
-                throw new \Exception(get_class().": authParam validator not found: {$paramName}");
+            if (method_exists($this, static::$acceptableParams[$paramName])) {
+                $validated = call_user_func([$this, static::$acceptableParams[$paramName]], $paramValue);
+            } elseif (function_exists(static::$acceptableParams[$paramName])) {
+                $validated = call_user_func(static::$acceptableParams[$paramName], $paramValue);
+            } else {
+                throw new BadMethodCallException(get_class($this) . " does not have a validation for $paramName");
             }
 
-            if (!$validationPassed) {
-                throw new \Exception(get_class().": Failed authParam validation: {$paramName}");
+            if (!$validated) {
+                throw new ValueError("$paramName has an invalid value: $paramValue");
             }
         }
     }
