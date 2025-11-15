@@ -195,9 +195,14 @@ class NetConfConfigClient extends NetConf
         $outputParameters = [];
 
         $validations = [
-            'target' => fn ($parameter) => $this->validateDataStore(preg_replace('/^<([^\/]+)\/>$/', '$1', $parameter)),
+            'target' => fn ($p) => $this->validateDataStore(preg_replace('/^<([^\/]+)\/>$/', '$1', $p)),
             'default-operation' => NetConfConstants::EDIT_CONFIG_DEFAULT_OPERATIONS,
-            'test-option' => NetConfConstants::EDIT_CONFIG_TEST_OPTIONS,
+            'test-option' => function ($p) {
+                if (!$this->capabilitySupported(NetConfConstants::CAPABILITY_VALIDATE_1_1)) {
+                    throw new InvalidParameterException("Test-Option is not supported by the server");
+                }
+                $this->validateParameter($p, NetConfConstants::EDIT_CONFIG_TEST_OPTIONS);
+            },
             'error-option' => NetConfConstants::EDIT_CONFIG_ERROR_OPTIONS,
             'config' => null,
             /** This has been added to be Juniper-Compatible and provide the configuration as Simple String */

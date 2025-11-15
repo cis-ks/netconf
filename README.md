@@ -3,8 +3,8 @@ NETCONF
 This is a vendor-agnostic PHP implementation of NETCONF. It was originally developed by Lamoni Finlayson, so he could
 extend a Junos (Juniper) specific NETCONF API off of it.
 
-As the used phpseclib library was outdated, I decided to change the code to use the newer version and also did some
-refactoring.
+As the used phpseclib library was outdated, I decided to implement the support for phpseclib3 and also refactor the code
+to be more oriented towards modern PHP versions.
 
 
 Targeted RFCs
@@ -22,7 +22,6 @@ Dependencies
 To Do
 ----------
 
-- Attributes for sendRaw need to be sanitized correctly (https://tools.ietf.org/html/rfc6241)
 - Elements with attribute naming for subtree filters need to be implemented ("6.4.8. Elements with Attribute Naming")
 - Parse capabilities based on IANA
   list: http://www.iana.org/assignments/netconf-capability-urns/netconf-capability-urns.xhtml
@@ -121,6 +120,7 @@ $getUsersNames = $netConf->getConfig(
 Considerations
 ---------------------------
 
-- test-option: The <test-option> element MAY be specified only if the device advertises the :validate:1.1 capability (Section 8.6).
+- test-option: The <test-option> element MAY be specified only if the device advertises the :validate:1.1 capability (
+  Section 8.6).
 - Should I be implicitly locking/unlocking the config for editConfig() (<edit-config>) and commit() (<commit>) calls?
 - XPath capability in filter?
