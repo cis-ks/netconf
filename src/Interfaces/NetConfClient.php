@@ -8,6 +8,7 @@ use SimpleXMLElement;
 interface NetConfClient
 {
     public function sendRpc(string|SimpleXMLElement $rpc): NetConfMessageReceiveRpc|false;
+    /** @return string[] */
     public function getTheirCapabilities(): array;
     public function getSessionId(): int;
     public function setSessionId(int $sessionId): void;

@@ -1,4 +1,4 @@
-<?php
+<?php /** @noinspection PhpUnused */
 
 namespace CisBv\Netconf\NetConfMessage;
 
@@ -35,7 +35,7 @@ abstract class NetConfMessageReceiveAbstract implements NetConfMessage
         return (string)$this->response->asXML();
     }
 
-    public function getResponse(string $namespace = ''): SimpleXMLElement|null
+    public function getResponse(string|null $namespace = null): SimpleXMLElement|null
     {
         if ($this->response instanceof SimpleXMLElement) {
             $selectedNameSpace = $this->getSelectedNameSpace($namespace);
@@ -45,20 +45,28 @@ abstract class NetConfMessageReceiveAbstract implements NetConfMessage
         }
     }
 
+    public function getResponseData(string $dataEndpoint = 'data', string $namespace = ''): SimpleXMLElement|false
+    {
+        if (property_exists($this->getResponse($namespace), $dataEndpoint)) {
+            return $this->getResponse($namespace)->$dataEndpoint;
+        } else {
+            return false;
+        }
+    }
+
     protected function setResponse(SimpleXMLElement|string $response): void
     {
         $this->response = $response instanceof SimpleXMLElement ? $response : simplexml_load_string($response);
     }
 
-    protected function getSelectedNameSpace(string $namespace): string
+    protected function getSelectedNameSpace(string|null $namespace): string|null
     {
-        return rtrim(
-            match (true) {
-                !empty($namespace) => $namespace,
-                !empty($this->namespace) => $this->namespace,
-                default => ''
-            },
-            ':'
-        );
+        $selectedNameSpace = match (true) {
+            !is_null($namespace) => $namespace,
+            !empty($this->namespace) => $this->namespace,
+            default => null
+        };
+
+        return is_string($selectedNameSpace) ? rtrim($selectedNameSpace, ':') : $selectedNameSpace;
     }
 }

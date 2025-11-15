@@ -36,7 +36,7 @@ class NetConfMessageReceiveRpc extends NetConfMessageReceiveAbstract implements 
 
     protected function setRpcError(): void
     {
-        if (isset($this->getResponse()?->{'rpc-error'}) && $this->getResponse()?->{'rpc-error'}->hasChildren()) {
+        if (isset($this->getResponse()?->{'rpc-error'}) && $this->getResponse()?->{'rpc-error'}->count()) {
             $this->rpcError = NetConfRpcError::fromResponse($this->getResponse()?->{'rpc-error'});
         }
     }

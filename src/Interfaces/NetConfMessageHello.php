@@ -2,10 +2,9 @@
 
 namespace CisBv\Netconf\Interfaces;
 
-use SimpleXMLElement;
-
 interface NetConfMessageHello
 {
-    public function getCapabilities(): array;
+    /** @return string[] */
+    public function getTheirCapabilities(): array;
     public function getSessionId(): int;
 }

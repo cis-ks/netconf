@@ -1,7 +1,11 @@
 <?php
+/** @noinspection PhpUnused */
 
 namespace CisBv\Netconf;
 
+use CisBv\Netconf\Exceptions\InvalidDataStoreException;
+use CisBv\Netconf\Exceptions\InvalidParameterException;
+use CisBv\Netconf\NetConfConstants\NetConfConstants;
 use CisBv\Netconf\NetConfMessage\NetConfMessageReceiveRpc;
 use Exception;
 use InvalidArgumentException;
@@ -9,7 +13,8 @@ use SimpleXMLElement;
 
 class NetConfConfigClient extends NetConf
 {
-    const array VALID_CONFIG_OPERATIONS = ['merge', 'replace', 'delete', 'create', 'remove'];
+
+    protected array $lockState = [];
 
     /**
      * @throws Exception
@@ -18,7 +23,8 @@ class NetConfConfigClient extends NetConf
         array $filterPaths = [],
         string $filterType = "",
         string $dataStore = "running"
-    ): false|NetConfMessage\NetConfMessageReceiveRpc {
+    ): false|NetConfMessageReceiveRpc {
+        $this->validateDataStore($dataStore);
         $filterRoot = $this->getBaseXmlElement("<get-config><source><$dataStore/></source></get-config>");
 
         if (!empty($filterPaths)) {
@@ -28,7 +34,34 @@ class NetConfConfigClient extends NetConf
         return $this->sendRPC($filterRoot);
     }
 
-    private function addFilterElements(
+    /**
+     * @throws InvalidDataStoreException
+     */
+    protected function validateDataStore(string $dataStore): void
+    {
+        $supportedDataStores = ['running'];
+
+        if ($this->capabilitySupported(NetConfConstants::CAPABILITY_DATASTORE_CANDIDATE_1_0)) {
+            $supportedDataStores[] = 'candidate';
+        }
+
+        if ($this->capabilitySupported(
+            NetConfConstants::CAPABILITY_DATASTORE_STARTUP_1_0
+        )) {
+            $supportedDataStores[] = 'startup';
+        }
+
+        if (!in_array($dataStore, $supportedDataStores)) {
+            throw new InvalidDataStoreException(
+                "The data store $dataStore is not supported. Supported stores are: " . implode(
+                    ", ",
+                    $supportedDataStores
+                )
+            );
+        }
+    }
+
+    protected function addFilterElements(
         SimpleXMLElement $filterRoot,
         string $filterType,
         array $filterPaths
@@ -55,14 +88,14 @@ class NetConfConfigClient extends NetConf
         return $filterRoot;
     }
 
-    private function getFilterLevels(int|string $filterPath): array
+    protected function getFilterLevels(int|string $filterPath): array
     {
         $levelSplit = explode("/", trim($filterPath, "/"));
         $lastLevel = end($levelSplit);
         return array($levelSplit, $lastLevel);
     }
 
-    private function addChildToLastElement(mixed $elements, mixed $deepestNode, mixed $lastLevel): mixed
+    protected function addChildToLastElement(mixed $elements, mixed $deepestNode, mixed $lastLevel): mixed
     {
         foreach ($elements as $element) {
             $deepestNode = $deepestNode->addChild($lastLevel);
@@ -80,50 +113,118 @@ class NetConfConfigClient extends NetConf
      */
     public function editConfig(
         string $configString,
-        string $target = "running",
+        string $dataStore = "running",
         string $configRootNode = "",
         string $configOperation = "merge",
         array $customParameters = [],
         bool $lockConfig = true
     ): NetConfMessageReceiveRpc|false {
+        $this->validateDataStore($dataStore);
+        $this->validateConfigOperation($configOperation);
+
         if ($lockConfig) {
-            $lockConfigCheck = $this->lockConfig($target);
+            $lockConfigCheck = $this->lockConfig($dataStore);
 
             if (!$lockConfigCheck->isRpcReplyOk()) {
                 return $lockConfigCheck;
             }
         }
 
-        if (!in_array($configOperation, self::VALID_CONFIG_OPERATIONS)) {
-            throw new InvalidArgumentException(
-                sprintf(
-                    "Given config operation is not valid. Valid values are: %s. Given: %s",
-                    implode(", ", self::VALID_CONFIG_OPERATIONS),
-                    $configOperation
-                )
-            );
-        }
+        $configStringWithRootNode = empty($configRootNode)
+            ? $configString
+            : "<$configRootNode>$configString</$configRootNode>";
 
-        $configStringWithRootNode = empty($configRootNode) ? $configString : "<$configRootNode>$configString</$configRootNode>";
+        $editConfig = $this->getBaseXmlElement("<edit-config></edit-config>");
 
-        $editConfig = $this->getBaseXmlElement(
-            "<edit-config><target><$target></target><config operation='$configOperation'>$configStringWithRootNode</config></edit-config>"
+        $parameters = array_merge(
+            $customParameters,
+            ['target' => "$dataStore", 'config' => [$configStringWithRootNode, ['operation' => $configOperation]]]
         );
 
-        foreach ($customParameters as $parameterName => $parameterValue) {
-            $editConfig->addChild($parameterName, $parameterValue);
+        foreach ($this->getEditConfigParameters($parameters) as $name => $value) {
+            if (is_array($value)) {
+                $child = $editConfig->addChild($name, $value[0]);
+                foreach ($value[1] as $attributeName => $attributeValue) {
+                    $child->addAttribute($attributeName, $attributeValue);
+                }
+            } else {
+                $editConfig->addChild($name, $value);
+            }
         }
 
         return $this->sendRPC($editConfig->asXML());
     }
 
+    protected function validateConfigOperation(
+        string $configOperation,
+        array $validOperations = NetConfConstants::EDIT_CONFIG_OPERATIONS
+    ): void {
+        if (!in_array($configOperation, $validOperations)) {
+            throw new InvalidArgumentException(
+                sprintf(
+                    "Given config operation is not valid. Valid values are: %s. Given: %s",
+                    implode(", ", $validOperations),
+                    $configOperation
+                )
+            );
+        }
+    }
+
     /**
      * @throws Exception
      */
-    public function lockConfig(string $target = "running"): NetConfMessageReceiveRpc|false
+    public function lockConfig(string $dataStore = "running"): NetConfMessageReceiveRpc|false
     {
-        $lockConfig = $this->getBaseXmlElement("<lock><target><$target/></target></lock>");
-        return $this->sendRPC($lockConfig);
+        $this->validateDataStore($dataStore);
+        $lockConfig = $this->getBaseXmlElement("<lock><target><$dataStore/></target></lock>");
+        $lockResponse = $this->sendRPC($lockConfig);
+
+        if ($lockResponse->isRpcReplyOk()) {
+            $this->lockState[$dataStore] = true;
+        }
+
+        return $lockResponse;
+    }
+
+    /**
+     * @throws InvalidParameterException
+     */
+    protected function getEditConfigParameters(array $parameters = []): array
+    {
+        $outputParameters = [];
+
+        $validations = [
+            'target' => fn ($parameter) => $this->validateDataStore($parameter),
+            'default-operation' => NetConfConstants::EDIT_CONFIG_DEFAULT_OPERATIONS,
+            'test-option' => NetConfConstants::EDIT_CONFIG_TEST_OPTIONS,
+            'error-option' => NetConfConstants::EDIT_CONFIG_ERROR_OPTIONS,
+            'config' => null,
+        ];
+
+        foreach ($validations as $parameterName => $validation) {
+            if (array_key_exists($parameterName, $parameters)) {
+                if (is_callable($validation)) {
+                    call_user_func($validation, $parameters[$parameterName]);
+                } elseif (!is_null($validation)) {
+                    $this->validateParameter($parameters[$parameterName], $validation);
+                }
+                $outputParameters[] = $parameterName;
+            }
+        }
+
+        return array_intersect_key($parameters, array_flip($outputParameters));
+    }
+
+    /**
+     * @throws InvalidParameterException
+     */
+    protected function validateParameter(string $parameter, array $validParameters): void
+    {
+        if (!in_array($parameter, $validParameters)) {
+            throw new InvalidParameterException(
+                "Parameter $parameter is not valid. Valid parameters are: " . implode(",", $validParameters)
+            );
+        }
     }
 
     /**
@@ -141,9 +242,9 @@ class NetConfConfigClient extends NetConf
         return $this->sendRPC($copyConfig);
     }
 
-    private function formatConfigStatement(string $dataStore): string
+    protected function formatConfigStatement(string $target): string
     {
-        return str_starts_with($dataStore, 'url:') ? "<url>" . substr($dataStore, 4) . "</url>" : "<$dataStore/>";
+        return str_starts_with($target, 'url:') ? "<url>" . substr($target, 4) . "</url>" : "<$target/>";
     }
 
     /**
@@ -160,13 +261,16 @@ class NetConfConfigClient extends NetConf
      * @throws Exception
      */
     public function commit(
-        string $target = 'candidate',
+        string $dataStore = 'candidate',
         bool $unlockConfig = true,
         bool $requiresConfirm = false,
         int $confirmTimeout = 600,
         string $persistId = ""
     ): NetConfMessageReceiveRpc|false {
+        $this->validateDataStore($dataStore);
+
         $commit = $this->getBaseXmlElement("<commit></commit>");
+
         if ($requiresConfirm) {
             $commit->addChild("confirmed", "");
             $commit->addChild("confirm-timeout", $confirmTimeout);
@@ -182,7 +286,7 @@ class NetConfConfigClient extends NetConf
         }
 
         if ($unlockConfig) {
-            $unlockConfigCheck = $this->unlockConfig($target);
+            $unlockConfigCheck = $this->unlockConfig($dataStore);
 
             if (!$unlockConfigCheck->isRPCReplyOK()) {
                 return $unlockConfigCheck;
@@ -195,10 +299,22 @@ class NetConfConfigClient extends NetConf
     /**
      * @throws Exception
      */
-    public function unlockConfig(string $target): NetConfMessageReceiveRpc|false
+    public function unlockConfig(string $dataStore): NetConfMessageReceiveRpc|false
     {
-        $unlockConfig = $this->getBaseXmlElement("<unlock><target><$target/></target></unlock>");
-        return $this->sendRPC($unlockConfig);
+        $this->validateDataStore($dataStore);
+        $unlockConfig = $this->getBaseXmlElement("<unlock><target><$dataStore/></target></unlock>");
+        $unlockResponse = $this->sendRPC($unlockConfig);
+
+        if ($unlockResponse->isRpcReplyOk()) {
+            $this->lockState[$dataStore] = false;
+        }
+
+        return $unlockResponse;
+    }
+
+    public function getLockState(string $dataStore): bool
+    {
+        return $this->lockState[$dataStore] ?? false;
     }
 
     /**

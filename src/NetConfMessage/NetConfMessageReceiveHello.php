@@ -1,13 +1,14 @@
 <?php
 namespace CisBv\Netconf\NetConfMessage;
 
+use CisBv\Netconf\Interfaces\NetConfMessageHello;
 use SimpleXMLElement;
 
 /**
  * Class NetConfMessageReceiveHello
  * @package CisBv\Netconf\NetConfMessage
  */
-class NetConfMessageReceiveHello extends NetConfMessageReceiveAbstract
+class NetConfMessageReceiveHello extends NetConfMessageReceiveAbstract implements NetConfMessageHello
 {
 
     /**
@@ -43,6 +44,7 @@ class NetConfMessageReceiveHello extends NetConfMessageReceiveAbstract
         $this->sessionId = (int)$this->getResponse()?->{'session-id'} ?? 0;
     }
 
+    /** @return string[] */
     public function getTheirCapabilities(): array
     {
         return $this->theirCapabilities;

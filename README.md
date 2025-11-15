@@ -81,7 +81,7 @@ $editConfig = $netConf->editConfig(
             </interface>
         </interfaces>
     </configuration>",
-    target: 'candidate',
+    dataStore: 'candidate',
     customParameters: ['custom-param' => 'custom-value']
 );
 
@@ -121,17 +121,6 @@ $getUsersNames = $netConf->getConfig(
 Considerations
 ---------------------------
 
-- Namespaces?
-- Heavier use of Exceptions?
-- test-option:  The <test-option> element MAY be specified only if the device advertises the :validate:1.1 capability (
-  Section 8.6).
+- test-option: The <test-option> element MAY be specified only if the device advertises the :validate:1.1 capability (Section 8.6).
 - Should I be implicitly locking/unlocking the config for editConfig() (<edit-config>) and commit() (<commit>) calls?
-- Should I remove the long list of arguments for argument-heavy methods and replace them with a single array?
-    - Pros
-        - it looks nicer
-        - allows for extension in the future without requiring heavy refactoring
-    - Cons
-        - Methods will require some extract() type code at the top, along with validation of keys passed through (
-          abstract class that?)
-        - IDEs argument suggestion won't work(?)
 - XPath capability in filter?

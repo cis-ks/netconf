@@ -1,9 +1,10 @@
-<?php
+<?php /** @noinspection PhpUnused */
+
 namespace CisBv\Netconf;
 
 use BadMethodCallException;
 use CisBv\Netconf\Interfaces\NetConfAuth;
-use CisBv\Netconf\NetConfAuth\NetConfAuthAbstract;
+use CisBv\Netconf\NetConfConstants\NetConfConstants;
 use CisBv\Netconf\NetConfMessage\NetConfMessageReceiveHello;
 use CisBv\Netconf\NetConfMessage\NetConfMessageReceiveRpc;
 use Exception;
@@ -20,7 +21,6 @@ use ValueError;
  */
 class NetConf
 {
-    const string NETCONF_BASE_NAMESPACE_REFERENCE = "urn:ietf:params:netconf:base:1.0";
 
     /**
      * SSH2 interface
@@ -39,7 +39,7 @@ class NetConf
 
 
     /**
-     * Their capabilities (informational only... no logic that uses these, yet...)
+     * Their capabilities
      */
     protected array $theirCapabilities = [];
 
@@ -54,16 +54,19 @@ class NetConf
      */
     protected array $sendHistory = [];
 
+    /**
+     * @throws Exception
+     */
     public function __construct(
         string $hostname,
-        NetConfAuthAbstract $netconfAuth,
+        NetConfAuth $auth,
         array $options = [],
         protected string $namespace = 'nc:',
     ) {
         /**
          * Defaults
          * - I declare the variables and then compact() them to appease the IDE Gods so they'll smite
-         *    the red squiggly lines under variables created by extract().. I hate that I'll
+         *    the red squiggly lines under variables created by extract(). I hate that I'll
          *    still have to add to the compact() call if I ever want to use a new variable...
          *    But flexibility in options is too sexy.
          */
@@ -93,67 +96,10 @@ class NetConf
         $this->exchangeHellos();
     }
 
-    /**
-     * Builds the RPC calls (wraps with <rpc> and increases the message ID counter
-     */
-    public function sendRPC(string|SimpleXMLElement $rpc): NetConfMessageReceiveRpc|false
-    {
-        if (!is_string($rpc)) {
-            $rpc = $rpc->asXML();
-        }
-
-        $this->messageId++;
-        $response = $this->sendRaw(
-            $rpc, "rpc", "</{$this->namespace}rpc-reply>",
-            ["message-id"=>$this->messageID]
-        );
-
-        return is_string($response) ? new NetConfMessageReceiveRpc($response) : false;
-    }
-
-    public function getTheirCapabilities(): array
-    {
-        return $this->theirCapabilities;
-    }
-
-    public function getSessionId(): int
-    {
-        return $this->sessionId;
-    }
-
-    public function setSessionId(int $sessionId): void
-    {
-        $this->sessionId = $sessionId;
-    }
-
-    public function getSendHistory(): array
-    {
-        return $this->sendHistory;
-    }
-
-    public function clearSendHistory(): void
-    {
-        $this->sendHistory = [];
-    }
-
-    public function closeSession(): NetConfMessageReceiveRpc|false
-    {
-        return $this->sendRPC("<{$this->namespace}close-session/>");
-    }
-
-    public function killSession(int $sessionId): NetConfMessageReceiveRpc|false
-    {
-        return $this->sendRPC(sprintf(
-            '<%skill-session><%1$ssession-id>%d</%1$ssession-id></%1$skill-session>',
-            $this->namespace,
-            $sessionId
-        ));
-    }
-
     protected function setupMyCapabilities(array $myCapabilities): void
     {
         $this->myCapabilities = array_merge(
-            [self::NETCONF_BASE_NAMESPACE_REFERENCE],
+            [NetConfConstants::NETCONF_BASE_1_0],
             $myCapabilities
         );
     }
@@ -195,7 +141,26 @@ class NetConf
         );
     }
 
-     protected function sendHello(): void
+    /** @return string[] */
+    public function getTheirCapabilities(): array
+    {
+        return $this->theirCapabilities;
+    }
+
+    public function getSessionId(): int
+    {
+        return $this->sessionId;
+    }
+
+    public function setSessionId(int $sessionId): void
+    {
+        $this->sessionId = $sessionId;
+    }
+
+    /**
+     * @throws Exception
+     */
+    protected function sendHello(): void
     {
         $helloXML = $this->getBaseXmlElement("<capabilities> </capabilities>");
 
@@ -204,6 +169,19 @@ class NetConf
         }
 
         $this->sendRaw($helloXML->asXML(), "hello", null, [], false);
+    }
+
+    /**
+     * @throws Exception
+     */
+    protected function getBaseXmlElement(string $xml): SimpleXMLElement
+    {
+        $element = new SimpleXMLElement($xml);
+        if (!empty($this->namespace)) {
+            $element->registerXPathNamespace($this->namespace, NetConfConstants::NETCONF_BASE_1_0);
+        }
+
+        return $element;
     }
 
     /**
@@ -236,16 +214,54 @@ class NetConf
         return $this->readReply($endOfMessageDelimiter);
     }
 
-    /**
-     * @throws Exception
-     */
-    protected function getBaseXmlElement(string $xml): SimpleXMLElement
+    public function getSendHistory(): array
     {
-        $element = new SimpleXMLElement($xml);
-        if (!empty($this->namespace)) {
-            $element->registerXPathNamespace($this->namespace, $this->myCapabilities[0]);
+        return $this->sendHistory;
+    }
+
+    public function clearSendHistory(): void
+    {
+        $this->sendHistory = [];
+    }
+
+    public function closeSession(): NetConfMessageReceiveRpc|false
+    {
+        return $this->sendRPC("<{$this->namespace}close-session/>");
+    }
+
+    /**
+     * Builds the RPC calls (wraps with <rpc> and increases the message ID counter
+     */
+    public function sendRPC(string|SimpleXMLElement $rpc): NetConfMessageReceiveRpc|false
+    {
+        if (!is_string($rpc)) {
+            $rpc = $rpc->asXML();
         }
 
-        return $element;
+        $this->messageId++;
+        $response = $this->sendRaw(
+            $rpc,
+            "rpc",
+            "</{$this->namespace}rpc-reply>",
+            ["message-id" => $this->messageID]
+        );
+
+        return is_string($response) ? new NetConfMessageReceiveRpc($response) : false;
+    }
+
+    public function killSession(int $sessionId): NetConfMessageReceiveRpc|false
+    {
+        return $this->sendRPC(
+            sprintf(
+                '<%skill-session><%1$ssession-id>%d</%1$ssession-id></%1$skill-session>',
+                $this->namespace,
+                $sessionId
+            )
+        );
+    }
+
+    protected function capabilitySupported(string $capability): bool
+    {
+        return in_array($capability, $this->theirCapabilities);
     }
 }

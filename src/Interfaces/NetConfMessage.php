@@ -6,5 +6,5 @@ use SimpleXMLElement;
 
 interface NetConfMessage
 {
-    public function getResponse(): SimpleXMLElement|null;
+    public function getResponse(string $namespace = ''): SimpleXMLElement|null;
 }
