@@ -243,7 +243,7 @@ class NetConf
             $rpc,
             "rpc",
             "</{$this->namespace}rpc-reply>",
-            ["message-id" => $this->messageID]
+            ["message-id" => $this->messageId]
         );
 
         return is_string($response) ? new NetConfMessageReceiveRpc($response) : false;

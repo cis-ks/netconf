@@ -10,6 +10,7 @@ use CisBv\Netconf\NetConfMessage\NetConfMessageReceiveRpc;
 use Exception;
 use InvalidArgumentException;
 use SimpleXMLElement;
+use Throwable;
 
 class NetConfConfigClient extends NetConf
 {
@@ -114,7 +115,7 @@ class NetConfConfigClient extends NetConf
     public function editConfig(
         string $configString,
         string $dataStore = "running",
-        string $configRootNode = "",
+        string $configRootNode = "config",
         string $configOperation = "merge",
         array $customParameters = [],
         bool $lockConfig = true
@@ -130,23 +131,23 @@ class NetConfConfigClient extends NetConf
             }
         }
 
-        $configStringWithRootNode = empty($configRootNode)
-            ? $configString
-            : "<$configRootNode>$configString</$configRootNode>";
-
-        $editConfig = $this->getBaseXmlElement("<edit-config></edit-config>");
-
-        $parameters = array_merge(
-            $customParameters,
-            ['target' => "$dataStore", 'config' => [$configStringWithRootNode, ['operation' => $configOperation]]]
+        $baseParameters = $this->getEditConfigParameters(
+            ['target' => "<$dataStore/>", $configRootNode => [$configString, ['operation' => $configOperation]]]
         );
 
-        foreach ($this->getEditConfigParameters($parameters) as $name => $value) {
+        $baseXmlString = $this->getEditConfigBaseXmlString($baseParameters);
+
+        $editConfig = $this->getBaseXmlElement($baseXmlString);
+
+        foreach ($this->getEditConfigParameters($customParameters) as $name => $value) {
             if (is_array($value)) {
                 $child = $editConfig->addChild($name, $value[0]);
                 foreach ($value[1] as $attributeName => $attributeValue) {
                     $child->addAttribute($attributeName, $attributeValue);
                 }
+            } elseif (str_starts_with($value, "<")) {
+                $child = $editConfig->addChild($name);
+                $child->addChild(preg_replace('/^<([^\/]+)\/>$/', '$1', $value));
             } else {
                 $editConfig->addChild($name, $value);
             }
@@ -194,11 +195,16 @@ class NetConfConfigClient extends NetConf
         $outputParameters = [];
 
         $validations = [
-            'target' => fn ($parameter) => $this->validateDataStore($parameter),
+            'target' => fn ($parameter) => $this->validateDataStore(preg_replace('/^<([^\/]+)\/>$/', '$1', $parameter)),
             'default-operation' => NetConfConstants::EDIT_CONFIG_DEFAULT_OPERATIONS,
             'test-option' => NetConfConstants::EDIT_CONFIG_TEST_OPTIONS,
             'error-option' => NetConfConstants::EDIT_CONFIG_ERROR_OPTIONS,
             'config' => null,
+            /** This has been added to be Juniper-Compatible and provide the configuration as Simple String */
+            'config-text' => fn ($parameter) => preg_match(
+                '/^<configuration-text>.*<\/configuration-text>$/',
+                $parameter[0]
+            ),
         ];
 
         foreach ($validations as $parameterName => $validation) {
@@ -225,6 +231,35 @@ class NetConfConfigClient extends NetConf
                 "Parameter $parameter is not valid. Valid parameters are: " . implode(",", $validParameters)
             );
         }
+    }
+
+    /**
+     * Returning the Base-XML-String for the edit-config-RPC-Call. Accepting config-text for Juniper-Compatibility.
+     */
+    private function getEditConfigBaseXmlString(array $baseParameters): string
+    {
+        $baseXmlString = "";
+
+        foreach ($baseParameters as $key => $value) {
+            if (is_array($value)) {
+                $baseXmlString .= sprintf(
+                    '<%s %s>%s</%1$s>',
+                    $key,
+                    join(
+                        " ",
+                        array_map(
+                            fn ($k) => "$k=\"{$value[1][$k]}\"",
+                            array_keys($value[1])
+                        )
+                    ),
+                    $value[0]
+                );
+            } else {
+                $baseXmlString .= sprintf('<%s>%s</%1$s>', $key, $value);
+            }
+        }
+
+        return "<edit-config>$baseXmlString</edit-config>";
     }
 
     /**
@@ -324,5 +359,18 @@ class NetConfConfigClient extends NetConf
     {
         $cancelCommit = $this->getBaseXmlElement("<cancel-commit/>");
         return $this->sendRPC($cancelCommit);
+    }
+
+    public function __destruct()
+    {
+        foreach ($this->lockState as $dataStore => $lockState) {
+            if ($lockState) {
+                try {
+                    $this->unlockConfig($dataStore);
+                } catch (Throwable) {
+                    // Ignore errors during automated unlocking when the script ends
+                }
+            }
+        }
     }
 }
