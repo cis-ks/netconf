@@ -58,6 +58,11 @@ class NetConfMessageReceiveRpc extends NetConfMessageReceiveAbstract implements 
         return $this->rpcError ?? false;
     }
 
+    public function getRpcReplyError(): NetConfRpcError|false
+    {
+        return $this->getError();
+    }
+
     /**
      * Returns <rpc-reply> data
      */
