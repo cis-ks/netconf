@@ -27,9 +27,11 @@ class NetConfMessageReceiveRpc extends NetConfMessageReceiveAbstract implements 
     /**
      * Build our NetConfMessageReceiveRPC instance
      */
-    public function __construct(SimpleXMLElement|string $response)
-    {
-        parent::__construct($response);
+    public function __construct(
+        SimpleXMLElement|string $response,
+        protected string $namespace = 'nc:'
+    ) {
+        parent::__construct($response, $this->namespace);
         $this->setMessageId();
         $this->setRpcError();
     }
