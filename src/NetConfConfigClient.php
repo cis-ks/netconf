@@ -312,6 +312,9 @@ class NetConfConfigClient extends NetConf
         $commit = $this->getBaseXmlElement("<commit></commit>");
 
         if ($requiresConfirm) {
+            if (!$this->isConfirmedCommitCapable($requiresConfirm)) {
+                throw new InvalidArgumentException("Confirmed commit is not supported by the system.");
+            }
             $commit->addChild("confirmed", "");
             $commit->addChild("confirm-timeout", $confirmTimeout);
             if (!empty($persistId)) {
@@ -377,5 +380,15 @@ class NetConfConfigClient extends NetConf
                 }
             }
         }
+    }
+
+    protected function isConfirmedCommitCapable(bool $requiresConfirm): bool
+    {
+        return $requiresConfirm && $this->capabilitiesSupported(
+                [
+                    NetConfConstants::CAPABILITY_COMMIT_CONFIRMED_1_1,
+                    NetConfConstants::CAPABILITY_DATASTORE_CANDIDATE_1_0
+                ]
+            );
     }
 }

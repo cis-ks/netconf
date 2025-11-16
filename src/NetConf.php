@@ -264,4 +264,10 @@ class NetConf
     {
         return in_array($capability, $this->theirCapabilities);
     }
+
+    protected function capabilitiesSupported(array $capabilities): bool
+    {
+        return count(array_intersect($capabilities, $this->theirCapabilities)) === count($capabilities);
+
+    }
 }
