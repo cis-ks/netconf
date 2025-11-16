@@ -7,7 +7,7 @@ use CisBv\Netconf\Junos\Enum\CompareFormat;
 use CisBv\Netconf\Junos\Enum\CompareType;
 use CisBv\Netconf\NetConfMessage\NetConfMessageReceiveRpc;
 
-interface NetConfJuniperClient
+interface NetConfJunOsClient
 {
     public function compareConfiguration(
         string $rollbackOrRevisionId,

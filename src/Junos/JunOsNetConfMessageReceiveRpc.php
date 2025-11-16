@@ -3,11 +3,11 @@
 namespace CisBv\Netconf\Junos;
 
 use CisBv\Netconf\Junos\Enum\MessageType;
-use CisBv\Netconf\Junos\Interfaces\JuniperNetConfMessageReceiveRpcInterface;
+use CisBv\Netconf\Junos\Interfaces\JunOsNetConfMessageReceiveRpcInterface;
 use CisBv\Netconf\NetConfMessage\NetConfMessageReceiveRpc;
 use SimpleXMLElement;
 
-class JuniperNetConfMessageReceiveRpc extends NetConfMessageReceiveRpc implements JuniperNetConfMessageReceiveRpcInterface
+class JunOsNetConfMessageReceiveRpc extends NetConfMessageReceiveRpc implements JunOsNetConfMessageReceiveRpcInterface
 {
     public function __construct(
         SimpleXMLElement|string $response,

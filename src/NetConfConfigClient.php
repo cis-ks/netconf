@@ -205,7 +205,7 @@ class NetConfConfigClient extends NetConf
             },
             'error-option' => NetConfConstants::EDIT_CONFIG_ERROR_OPTIONS,
             'config' => null,
-            /** This has been added to be Juniper-Compatible and provide the configuration as Simple String */
+            /** This has been added to be HPE JunOS-Compatible and provide the configuration as Simple String */
             'config-text' => fn ($parameter) => preg_match(
                 '/^<configuration-text>.*<\/configuration-text>$/',
                 $parameter[0]
@@ -239,7 +239,7 @@ class NetConfConfigClient extends NetConf
     }
 
     /**
-     * Returning the Base-XML-String for the edit-config-RPC-Call. Accepting config-text for Juniper-Compatibility.
+     * Returning the Base-XML-String for the edit-config-RPC-Call. Accepting config-text for JunOS-Compatibility.
      */
     private function getEditConfigBaseXmlString(array $baseParameters): string
     {

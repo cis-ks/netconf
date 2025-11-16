@@ -6,11 +6,11 @@ use CisBv\Netconf\Junos\Enum\CompareDatabase;
 use CisBv\Netconf\Junos\Enum\CompareFormat;
 use CisBv\Netconf\Junos\Enum\CompareType;
 use CisBv\Netconf\Junos\Enum\MessageType;
-use CisBv\Netconf\Junos\JuniperNetConfMessageReceiveRpc;
+use CisBv\Netconf\Junos\JunOsNetConfMessageReceiveRpc;
 use CisBv\Netconf\NetConfMessage\NetConfMessageReceiveRpc;
 use InvalidArgumentException;
 
-class NetConfJuniperClient extends NetConfConfigClient implements Interfaces\NetConfJuniperClient
+class NetConfJunOsClient extends NetConfConfigClient implements Interfaces\NetConfJunOsClient
 {
     public function compareConfiguration(
         string $rollbackOrRevisionId,
@@ -41,7 +41,7 @@ class NetConfJuniperClient extends NetConfConfigClient implements Interfaces\Net
         };
 
         return $response instanceof NetConfMessageReceiveRpc
-            ? new JuniperNetConfMessageReceiveRpc($response->getResponse(''), $this->namespace, $messageType)
+            ? new JunOsNetConfMessageReceiveRpc($response->getResponse(''), $this->namespace, $messageType)
             : $response;
     }
 
@@ -71,7 +71,7 @@ class NetConfJuniperClient extends NetConfConfigClient implements Interfaces\Net
         if ($response === false) {
             return false;
         }
-        return new JuniperNetConfMessageReceiveRpc(
+        return new JunOsNetConfMessageReceiveRpc(
             $response->getResponse(''),
             $this->namespace,
             MessageType::EDIT_CONFIG

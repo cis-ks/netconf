@@ -5,7 +5,7 @@ namespace CisBv\Netconf\Junos\Interfaces;
 use CisBv\Netconf\NetConfMessage\NetConfMessageReceiveRpc;
 use SimpleXMLElement;
 
-interface JuniperNetConfMessageReceiveRpcInterface
+interface JunOsNetConfMessageReceiveRpcInterface
 {
     public function getData(): string|SimpleXMLElement;
 }

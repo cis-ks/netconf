@@ -24,9 +24,9 @@ XML;
 DIFF;
 
 
-    $message = new JuniperNetConfMessageReceiveRpc($rpcReply, messageType: MessageType::COMPARE_MESSAGE_TEXT);
+    $message = new JunOsNetConfMessageReceiveRpc($rpcReply, messageType: MessageType::COMPARE_MESSAGE_TEXT);
 
-    expect($message)->toBeInstanceOf(JuniperNetConfMessageReceiveRpc::class)
+    expect($message)->toBeInstanceOf(JunOsNetConfMessageReceiveRpc::class)
         ->and($message->getResponse(''))->toBeInstanceOf(SimpleXMLElement::class)
         ->and($message->messageType)->toEqual(MessageType::COMPARE_MESSAGE_TEXT)
         ->and($message->getData())->toBeString()->toEqual($diffOutput);
@@ -53,8 +53,8 @@ test('Get Compare/JSON Reply', function () {
 </nc:rpc-reply>
 XML;
 
-    $message = new JuniperNetConfMessageReceiveRpc($rpcReply, messageType: MessageType::COMPARE_MESSAGE_JSON);
-    expect($message)->toBeInstanceOf(JuniperNetConfMessageReceiveRpc::class)
+    $message = new JunOsNetConfMessageReceiveRpc($rpcReply, messageType: MessageType::COMPARE_MESSAGE_JSON);
+    expect($message)->toBeInstanceOf(JunOsNetConfMessageReceiveRpc::class)
         ->and($message->getData())->toBeString()->toEqual("{\n    \"configuration\" : {\n        \"system\" : {\n            \"host-name\" : \"juniper1\", \n            \"@host-name\" : {\n                \"operation\" : \"create\"\n            }\n         }\n    }\n}");
 });
 
@@ -70,9 +70,9 @@ test('Get Compare/XML Reply', function () {
 </nc:rpc-reply>
 XML;
 
-    $message = new JuniperNetConfMessageReceiveRpc($rpcReply, messageType: MessageType::COMPARE_MESSAGE_XML);
+    $message = new JunOsNetConfMessageReceiveRpc($rpcReply, messageType: MessageType::COMPARE_MESSAGE_XML);
 
-    expect($message)->toBeInstanceOf(JuniperNetConfMessageReceiveRpc::class)
+    expect($message)->toBeInstanceOf(JunOsNetConfMessageReceiveRpc::class)
         ->and($message->getData())->toBeInstanceOf(SimpleXMLElement::class)
         ->toHaveProperty('system')
         ->and($message->getData()->system)->toHaveProperty('host-name');
