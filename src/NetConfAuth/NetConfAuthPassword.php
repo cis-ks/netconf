@@ -1,33 +1,27 @@
-<?php namespace Lamoni\NetConf\NetConfAuth;
+<?php
+namespace CisBv\Netconf\NetConfAuth;
 
-use Net_SSH2;
+use Exception;
+use phpseclib3\Net\SSH2;
+use RuntimeException;
 
 /**
  * Class NetConfAuthPassword
- * @package Lamoni\NetConf\NetConfAuth
+ * @package CisBv\Netconf\NetConfAuth
  */
 class NetConfAuthPassword extends NetConfAuthAbstract
 {
+    protected static array $acceptableParams = ['username' => 'is_string', 'password' => 'is_string'];
+
     /**
-     *Performs the authentication check for this auth type
+     * Performs the authentication check for this auth type
      *
-     * @param Net_SSH2 $ssh
-     * @throws \Exception
+     * @throws RuntimeException|Exception
      */
-    public function login(Net_SSH2 &$ssh)
+    public function login(SSH2 $ssh): void
     {
-        $this->validateAuthParams(
-            $this->authParams,
-            $acceptableParams = [
-                'username' => 'is_string',
-                'password' => 'is_string'
-            ]
-        );
-
-        extract($this->authParams);
-
-        if (!$ssh->login($username, $password)) {
-            throw new \Exception(get_class().': Authentication failed');
+        if (!$ssh->login($this->authParams['username'], $this->authParams['password'])) {
+            throw new RuntimeException("Authentication for {$this->authParams['username']} failed");
         }
     }
 }
