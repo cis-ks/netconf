@@ -8,6 +8,9 @@
     "ext-simplexml": "*",
     "phpseclib/phpseclib": "^3.0.0"
   },
+  "require-dev": {
+    "pestphp/pest": "^4.1"
+  },
   "authors": [
     {
       "name": "Lamoni Finlayson",
@@ -25,7 +28,13 @@
   ],
   "autoload": {
     "psr-4": {
-      "CisBv\\Netconf\\": "src"
+      "CisBv\\Netconf\\": "src",
+      "Tests\\": "tests"
+    }
+  },
+  "config": {
+    "allow-plugins": {
+      "pestphp/pest-plugin": true
     }
   }
 }

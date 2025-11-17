@@ -5,6 +5,7 @@ namespace CisBv\Netconf;
 
 use CisBv\Netconf\Exceptions\InvalidDataStoreException;
 use CisBv\Netconf\Exceptions\InvalidParameterException;
+use CisBv\Netconf\Exceptions\UnsupportedFeatureException;
 use CisBv\Netconf\NetConfConstants\NetConfConstants;
 use CisBv\Netconf\NetConfMessage\NetConfMessageReceiveRpc;
 use Exception;
@@ -42,12 +43,12 @@ class NetConfConfigClient extends NetConf
     {
         $supportedDataStores = ['running'];
 
-        if ($this->capabilitySupported(NetConfConstants::CAPABILITY_DATASTORE_CANDIDATE_1_0)) {
+        if ($this->capabilitySupported(NetConfConstants::CAPABILITY_DATASTORE_CANDIDATE)) {
             $supportedDataStores[] = 'candidate';
         }
 
         if ($this->capabilitySupported(
-            NetConfConstants::CAPABILITY_DATASTORE_STARTUP_1_0
+            NetConfConstants::CAPABILITY_DATASTORE_STARTUP
         )) {
             $supportedDataStores[] = 'startup';
         }
@@ -198,14 +199,14 @@ class NetConfConfigClient extends NetConf
             'target' => fn ($p) => $this->validateDataStore(preg_replace('/^<([^\/]+)\/>$/', '$1', $p)),
             'default-operation' => NetConfConstants::EDIT_CONFIG_DEFAULT_OPERATIONS,
             'test-option' => function ($p) {
-                if (!$this->capabilitySupported(NetConfConstants::CAPABILITY_VALIDATE_1_1)) {
-                    throw new InvalidParameterException("Test-Option is not supported by the server");
+                if (!$this->capabilitySupported(NetConfConstants::CAPABILITY_VALIDATE)) {
+                    throw new UnsupportedFeatureException("Test-Option is not supported by the system.");
                 }
                 $this->validateParameter($p, NetConfConstants::EDIT_CONFIG_TEST_OPTIONS);
             },
             'error-option' => NetConfConstants::EDIT_CONFIG_ERROR_OPTIONS,
             'config' => null,
-            /** This has been added to be Juniper-Compatible and provide the configuration as Simple String */
+            /** This has been added to be HPE JunOS-Compatible and provide the configuration as Simple String */
             'config-text' => fn ($parameter) => preg_match(
                 '/^<configuration-text>.*<\/configuration-text>$/',
                 $parameter[0]
@@ -239,7 +240,7 @@ class NetConfConfigClient extends NetConf
     }
 
     /**
-     * Returning the Base-XML-String for the edit-config-RPC-Call. Accepting config-text for Juniper-Compatibility.
+     * Returning the Base-XML-String for the edit-config-RPC-Call. Accepting config-text for JunOS-Compatibility.
      */
     private function getEditConfigBaseXmlString(array $baseParameters): string
     {
@@ -313,7 +314,7 @@ class NetConfConfigClient extends NetConf
 
         if ($requiresConfirm) {
             if (!$this->isConfirmedCommitCapable($requiresConfirm)) {
-                throw new InvalidArgumentException("Confirmed commit is not supported by the system.");
+                throw new UnsupportedFeatureException("Confirmed commit is not supported by the system.");
             }
             $commit->addChild("confirmed", "");
             $commit->addChild("confirm-timeout", $confirmTimeout);
@@ -386,8 +387,8 @@ class NetConfConfigClient extends NetConf
     {
         return $requiresConfirm && $this->capabilitiesSupported(
                 [
-                    NetConfConstants::CAPABILITY_COMMIT_CONFIRMED_1_1,
-                    NetConfConstants::CAPABILITY_DATASTORE_CANDIDATE_1_0
+                    NetConfConstants::CAPABILITY_COMMIT_CONFIRMED,
+                    NetConfConstants::CAPABILITY_DATASTORE_CANDIDATE
                 ]
             );
     }

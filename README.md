@@ -1,7 +1,7 @@
 NETCONF
 -------
 This is a vendor-agnostic PHP implementation of NETCONF. It was originally developed by Lamoni Finlayson, so he could
-extend a Junos (Juniper) specific NETCONF API off of it.
+extend a JunOS (HPE) specific NETCONF API off of it.
 
 As the used phpseclib library was outdated, I decided to implement the support for phpseclib3 and also refactor the code
 to be more oriented towards modern PHP versions.

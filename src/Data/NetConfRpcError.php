@@ -15,7 +15,7 @@ final readonly class NetConfRpcError
         public string $appTag,
         public string $path,
         public string $message,
-        public string|SimpleXMLElement $info
+        public string|SimpleXMLElement|null $info
     ) {
     }
 
@@ -35,7 +35,7 @@ final readonly class NetConfRpcError
             $data->{'error-app-tag'} ?? '',
             $data->{'error-path'} ?? '',
             $data->{'error-message'} ?? '',
-            $data->info ?? ''
+            $data->{'error-info'} ?? null
         );
     }
 }
