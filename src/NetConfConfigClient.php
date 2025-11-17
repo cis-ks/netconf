@@ -5,6 +5,7 @@ namespace CisBv\Netconf;
 
 use CisBv\Netconf\Exceptions\InvalidDataStoreException;
 use CisBv\Netconf\Exceptions\InvalidParameterException;
+use CisBv\Netconf\Exceptions\UnsupportedFeatureException;
 use CisBv\Netconf\NetConfConstants\NetConfConstants;
 use CisBv\Netconf\NetConfMessage\NetConfMessageReceiveRpc;
 use Exception;
@@ -199,7 +200,7 @@ class NetConfConfigClient extends NetConf
             'default-operation' => NetConfConstants::EDIT_CONFIG_DEFAULT_OPERATIONS,
             'test-option' => function ($p) {
                 if (!$this->capabilitySupported(NetConfConstants::CAPABILITY_VALIDATE)) {
-                    throw new InvalidParameterException("Test-Option is not supported by the server");
+                    throw new UnsupportedFeatureException("Test-Option is not supported by the system.");
                 }
                 $this->validateParameter($p, NetConfConstants::EDIT_CONFIG_TEST_OPTIONS);
             },
@@ -313,7 +314,7 @@ class NetConfConfigClient extends NetConf
 
         if ($requiresConfirm) {
             if (!$this->isConfirmedCommitCapable($requiresConfirm)) {
-                throw new InvalidArgumentException("Confirmed commit is not supported by the system.");
+                throw new UnsupportedFeatureException("Confirmed commit is not supported by the system.");
             }
             $commit->addChild("confirmed", "");
             $commit->addChild("confirm-timeout", $confirmTimeout);
