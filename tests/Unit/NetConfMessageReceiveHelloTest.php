@@ -1,6 +1,8 @@
 <?php
 
-namespace CisBv\Netconf\NetConfMessage;
+namespace Tests\Unit\NetConfMessage;
+
+use CisBv\Netconf\NetConfMessage\NetConfMessageReceiveHello;
 
 test('Hello Mesage correctly parses The capabilities', function () {
     $helloMessage = <<<XML

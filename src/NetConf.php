@@ -1,4 +1,5 @@
-<?php /** @noinspection PhpUnused */
+<?php
+/** @noinspection PhpUnused */
 
 namespace CisBv\Netconf;
 
@@ -262,12 +263,26 @@ class NetConf
 
     protected function capabilitySupported(string $capability): bool
     {
-        return in_array($capability, $this->theirCapabilities);
+        if (str_starts_with($capability, 'regex:')) {
+            $foundCapabilities = preg_grep(
+                sprintf(
+                    '/%s/',
+                    str_replace('/', '\/', substr($capability, 6))
+                ),
+                $this->theirCapabilities
+            );
+            return !empty($foundCapabilities);
+        } else {
+            return in_array($capability, $this->theirCapabilities);
+        }
     }
 
     protected function capabilitiesSupported(array $capabilities): bool
     {
-        return count(array_intersect($capabilities, $this->theirCapabilities)) === count($capabilities);
-
+        return array_reduce(
+            array_map([$this, 'capabilitySupported'], $capabilities),
+            fn ($state, $capability) => $state && $capability,
+            true
+        );
     }
 }

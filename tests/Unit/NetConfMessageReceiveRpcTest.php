@@ -1,10 +1,11 @@
 <?php /** @noinspection XmlUnusedNamespaceDeclaration */
 
-namespace CisBv\Netconf\NetConfMessage;
+namespace Tests\Unit\NetConfMessage;
 
 
 use CisBv\Netconf\Data\Enum\NetConfRpcErrorType;
 use CisBv\Netconf\Data\NetConfRpcError;
+use CisBv\Netconf\NetConfMessage\NetConfMessageReceiveRpc;
 use SimpleXMLElement;
 
 test('Error got\'s correctly parsed', function () {
